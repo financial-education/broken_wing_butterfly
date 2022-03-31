@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2022-03-29 Tue 20:19 -->
+<!-- 2022-03-31 Thu 13:12 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Broken Wing Butterfly Option Spread</title>
@@ -207,20 +207,16 @@
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orgce742e7">1. Application</a></li>
+<li><a href="#orgc5306e2">1. Butterfly</a></li>
+<li><a href="#orgb6f5bb0">2. Broken-Wing Butterfly</a></li>
 </ul>
 </div>
 </div>
-
-
-<div id="outline-container-orgce742e7" class="outline-2">
-<h2 id="orgce742e7"><span class="section-number-2">1.</span> Application</h2>
-<div class="outline-text-2" id="text-1">
 <p>
-Say we have the following values.  How much is the put option premium?
+Say we have the following values: 
 </p>
 
-<table id="org0a6cbf6" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org3f94d73" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -245,44 +241,121 @@ Say we have the following values.  How much is the put option premium?
 </tr>
 
 <tr>
-<td class="org-left">Call strike</td>
-<td class="org-right">110</td>
-</tr>
-
-<tr>
 <td class="org-left">Call premium</td>
 <td class="org-right">1.00</td>
 </tr>
 
 <tr>
 <td class="org-left">time</td>
-<td class="org-right">1</td>
+<td class="org-right">1/12</td>
 </tr>
 </tbody>
 </table>
 
+<p>
+For our butterfly and broken-wing butterfly we'll use the following strike prices in the table below.  Using the <a href="https://financial-education.github.io/investments.html">Black-Scholes option pricing model</a>, we can calculate the call option price for each strike.
+</p>
+
 <div class="org-src-container">
-<pre class="src src-python"><span style="color: #dcaeea;">stock</span> = inputs[0][1]
-<span style="color: #dcaeea;">rate</span> = inputs[1][1]
-<span style="color: #dcaeea;">strike</span> = inputs[2][1]
-<span style="color: #dcaeea;">call_price</span> = inputs[3][1]
-<span style="color: #dcaeea;">time</span> = inputs[4][1]
+<pre class="src src-python" id="org92cabc9"><span style="color: #51afef;">import</span> numpy <span style="color: #51afef;">as</span> np
+<span style="color: #51afef;">from</span> scipy.stats <span style="color: #51afef;">import</span> norm
 
-<span style="color: #dcaeea;">put_price</span> = call_price + strike / (1 + rate)**time - stock
-
-<span style="color: #51afef;">print</span>(<span style="color: #98be65;">"Put price $"</span>, <span style="color: #c678dd;">round</span>(put_price, 1))
+<span style="color: #51afef;">def</span> <span style="color: #c678dd;">bs</span>(stock, strike, rf, vol, time):
+    <span style="color: #dcaeea;">d1</span> = (1 / (vol * np.sqrt(time))) * (np.log(stock / strike) + (rf + (vol * vol) / 2) * time)
+    <span style="color: #dcaeea;">d2</span> = d1 - vol * np.sqrt(time)
+    <span style="color: #dcaeea;">call</span> = norm.cdf(d1) * stock - norm.cdf(d2) * strike * np.exp(-rf * time)
+    <span style="color: #51afef;">return</span> <span style="color: #c678dd;">round</span>(call, 2)
 </pre>
 </div>
 
-<pre class="example">
-Put price $ 10.0
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-right" />
+
+<col  class="org-right" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-right">Strike Price</th>
+<th scope="col" class="org-right">Call Premium</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-right">90</td>
+<td class="org-right">10.78</td>
+</tr>
+
+<tr>
+<td class="org-right">100</td>
+<td class="org-right">3.66</td>
+</tr>
+
+<tr>
+<td class="org-right">110</td>
+<td class="org-right">0.68</td>
+</tr>
+
+<tr>
+<td class="org-right">120</td>
+<td class="org-right">0.07</td>
+</tr>
+</tbody>
+</table>
+
+<div id="outline-container-orgc5306e2" class="outline-2">
+<h2 id="orgc5306e2"><span class="section-number-2">1.</span> Butterfly</h2>
+<div class="outline-text-2" id="text-1">
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #51afef;">import</span> seaborn
+<span style="color: #51afef;">import</span> numpy
+<span style="color: #51afef;">import</span> matplotlib.pyplot <span style="color: #51afef;">as</span> plt
+plt.style.use(<span style="color: #98be65;">"dark_background"</span>)
+
+<span style="color: #51afef;">class</span> <span style="color: #ECBE7B;">Butterfly</span>:
+    <span style="color: #51afef;">def</span> <span style="color: #c678dd;">__init__</span>(<span style="color: #51afef;">self</span>, strike_1, strike_2, strike_3, price_1, price_2, price_3):
+        <span style="color: #51afef;">self</span>.strike_1 = strike_1
+        <span style="color: #51afef;">self</span>.strike_2 = strike_2
+        <span style="color: #51afef;">self</span>.strike_3 = strike_3
+        <span style="color: #51afef;">self</span>.price_1 = price_1
+        <span style="color: #51afef;">self</span>.price_2 = price_2
+        <span style="color: #51afef;">self</span>.price_3 = price_3
+
+    <span style="color: #51afef;">def</span> <span style="color: #c678dd;">plot</span>(<span style="color: #51afef;">self</span>):
+       <span style="color: #dcaeea;">lower_range</span> = <span style="color: #51afef;">self</span>.strike_1 - 10
+       <span style="color: #dcaeea;">upper_range</span> = <span style="color: #51afef;">self</span>.strike_3 + 10
+       <span style="color: #dcaeea;">underlying_price</span> = <span style="color: #c678dd;">list</span>(<span style="color: #c678dd;">range</span>(lower_range, upper_range+1))
+       <span style="color: #dcaeea;">profit_strike_1</span> = numpy.array([<span style="color: #c678dd;">max</span>(i - <span style="color: #51afef;">self</span>.strike_1, 0) - <span style="color: #51afef;">self</span>.price_1 <span style="color: #51afef;">for</span> i <span style="color: #51afef;">in</span> underlying_price])
+       <span style="color: #dcaeea;">profit_strike_2</span> = -2 * numpy.array([<span style="color: #c678dd;">max</span>(i - <span style="color: #51afef;">self</span>.strike_2, 0) - <span style="color: #51afef;">self</span>.price_2 <span style="color: #51afef;">for</span> i <span style="color: #51afef;">in</span> underlying_price])
+       <span style="color: #dcaeea;">profit_strike_3</span> = numpy.array([<span style="color: #c678dd;">max</span>(i - <span style="color: #51afef;">self</span>.strike_3, 0) - <span style="color: #51afef;">self</span>.price_3 <span style="color: #51afef;">for</span> i <span style="color: #51afef;">in</span> underlying_price])
+       <span style="color: #dcaeea;">spread_profit</span> = profit_strike_1 + profit_strike_2 + profit_strike_3
+       <span style="color: #dcaeea;">spread_plot</span> = seaborn.lineplot(x = underlying_price, y = spread_profit)
+       <span style="color: #dcaeea;">fig</span> = spread_plot.get_figure()
+       fig.savefig(<span style="color: #98be65;">"butterfly_profit.png"</span>)
+       <span style="color: #5B6268;">## </span><span style="color: #5B6268;">spread_plot</span>
+       <span style="color: #5B6268;">## </span><span style="color: #5B6268;">plt.show()</span>
+
+    <span style="color: #51afef;">def</span> <span style="color: #c678dd;">max_min</span>(<span style="color: #51afef;">self</span>):
+        <span style="color: #5B6268;">## </span><span style="color: #5B6268;">calculate max gain, max loss, and b/e-------</span>
+
+
 </pre>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgb6f5bb0" class="outline-2">
+<h2 id="orgb6f5bb0"><span class="section-number-2">2.</span> Broken-Wing Butterfly</h2>
+<div class="outline-text-2" id="text-2">
 </div>
 </div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: Matt Brigida, Ph.D.</p>
-<p class="date">Created: 2022-03-29 Tue 20:19</p>
+<p class="date">Created: 2022-03-31 Thu 13:12</p>
 <p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

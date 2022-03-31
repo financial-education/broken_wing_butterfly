@@ -3,20 +3,127 @@
 #+email: matthew.brigida@sunypoly.edu
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
-   
-* Application
 
-
-Say we have the following values.  How much is the put option premium?
+Say we have the following values: 
 
 #+name: first-calc
 | Stock Price      |  100 |
 | Stock Volatility |  0.3 |
 | Risk-free rate   | 0.05 |
-| Call strike      |  110 |
 | Call premium     | 1.00 |
-| time             |    1 |
+| time             | 1/12 |
 
+For our butterfly and broken-wing butterfly we'll use the following strike prices in the table below.  Using the [[https://financial-education.github.io/investments.html][Black-Scholes option pricing model]], we can calculate the call option price for each strike.
+
+#+name: Black-Scholes Pricing Function
+#+begin_src python :session bw :exports code
+import numpy as np
+from scipy.stats import norm
+
+def bs(stock, strike, rf, vol, time):
+    d1 = (1 / (vol * np.sqrt(time))) * (np.log(stock / strike) + (rf + (vol * vol) / 2) * time)
+    d2 = d1 - vol * np.sqrt(time)
+    call = norm.cdf(d1) * stock - norm.cdf(d2) * strike * np.exp(-rf * time)
+    return round(call, 2)
+#+end_src
+
+#+RESULTS: Black-Scholes Pricing Function
+
+#+name: call-value-90
+#+begin_src python :results output :session bw :exports none
+print(bs(100, 90, 0.05, 0.3, 1/12))
+#+end_src
+
+#+RESULTS: call-value-90
+: 10.78
+
+#+name: call-value-100
+#+begin_src python :results output :session bw :exports none
+print(bs(100, 100, 0.05, 0.3, 1/12))
+#+end_src
+
+#+RESULTS: call-value-100
+: 3.66
+
+#+name: call-value-110
+#+begin_src python :results output :session bw :exports none
+print(bs(100, 110, 0.05, 0.3, 1/12))
+#+end_src
+
+#+RESULTS: call-value-110
+: 0.68
+
+
+#+name: call-value-120
+#+begin_src python :results output :session bw :exports none
+print(bs(100, 120, 0.05, 0.3, 1/12))
+#+end_src
+
+#+RESULTS: call-value-120
+: 0.07
+
+
+| Strike Price | Call Premium |
+|--------------+--------------|
+|           90 |        10.78 |
+|          100 |         3.66 |
+|          110 |         0.68 |
+|          120 |         0.07 |
+|--------------+--------------|
+#+TBLFM: @2$2='(org-sbe call-value-90)::@3$2='(org-sbe call-value-100)::@4$2='(org-sbe call-value-110)::@5$2='(org-sbe call-value-120)
+
+#+begin_comment
+This src_python[:session bw :exports value]{bs(100, 90, 0.05, 0.3, 1/12)} {{{results(=10.78=)}}}
+#+end_comment
+
+* Butterfly
+
+#+begin_src python :session butterfly
+import seaborn
+import numpy
+import matplotlib.pyplot as plt
+plt.style.use("dark_background")
+
+class Butterfly:
+    def __init__(self, strike_1, strike_2, strike_3, price_1, price_2, price_3):
+        self.strike_1 = strike_1
+        self.strike_2 = strike_2
+        self.strike_3 = strike_3
+        self.price_1 = price_1
+        self.price_2 = price_2
+        self.price_3 = price_3
+
+    def plot(self):
+       lower_range = self.strike_1 - 10
+       upper_range = self.strike_3 + 10
+       underlying_price = list(range(lower_range, upper_range+1))
+       profit_strike_1 = numpy.array([max(i - self.strike_1, 0) - self.price_1 for i in underlying_price])
+       profit_strike_2 = -2 * numpy.array([max(i - self.strike_2, 0) - self.price_2 for i in underlying_price])
+       profit_strike_3 = numpy.array([max(i - self.strike_3, 0) - self.price_3 for i in underlying_price])
+       spread_profit = profit_strike_1 + profit_strike_2 + profit_strike_3
+       spread_plot = seaborn.lineplot(x = underlying_price, y = spread_profit)
+       fig = spread_plot.get_figure()
+       fig.savefig("butterfly_profit.png")
+       ## spread_plot
+       ## plt.show()
+
+    def max_min(self):
+        ## calculate max gain, max loss, and b/e-------
+        
+
+#+end_src
+
+#+RESULTS:
+
+
+* Broken-Wing Butterfly
+
+
+
+
+
+
+#+begin_comment
 #+BEGIN_SRC python :var inputs=first-calc :results output :exports both
 stock = inputs[0][1]
 rate = inputs[1][1]
@@ -31,5 +138,5 @@ print("Put price $", round(put_price, 1))
 
 #+RESULTS:
 : Put price $ 5.8
-
+#+end_comment
 
